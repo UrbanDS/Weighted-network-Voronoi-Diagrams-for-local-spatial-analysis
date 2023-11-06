@@ -14,8 +14,8 @@ unreleased PySAL development version
 
 """
 import network as pynet
-import pysal.cg
-from pysal.cg.shapes import Point, Chain
+import libpysal.cg
+from libpysal.cg.shapes import Point, Chain
 from datetime import datetime
 import lincs
 import copy
@@ -256,14 +256,14 @@ def weighted_kde(G_origin,density_dic_ori,normalize_method,edge_weight_mode,norm
     density_dic = copy.deepcopy(density_dic_ori)
     
     if normalize_method == "linear":
-        min_d = numpy.min(density_dic.values())
-        max_d = numpy.max(density_dic.values())
+        min_d = numpy.min(list(density_dic.values()))
+        max_d = numpy.max(list(density_dic.values()))
         density_dic_new = {}
         for n in density_dic:
             density_dic_new[n] = (density_dic[n] - min_d)/(max_d - min_d) * (normalize[1]- normalize[0]) + normalize[0]
         density_dic = density_dic_new
     else:
-        index_arr = sorted(density_dic.iteritems(), key=operator.itemgetter(1))
+        index_arr = sorted(iter(density_dic.items()), key=operator.itemgetter(1))
         arr_set = set()
         for i in index_arr:
             arr_set.add(i[1])
@@ -294,7 +294,7 @@ def weighted_kde(G_origin,density_dic_ori,normalize_method,edge_weight_mode,norm
                     negative_c += 1    
    
     if negative_c>0:
-        print 'negative count: ', negative_c
+        print('negative count: ', negative_c)
     return G_weighted    
     
 def net_lincs(network_file, event_file, cell_width, weight = 'Distance-based',  distance_threshold = 300, 
@@ -419,7 +419,7 @@ def weighted_lincs(G_origin,cluster_levels,lisa_func,alpha,normalize_method,edge
         counter += 1
     
     if negative_c>0:
-        print 'negative count: ', negative_c
+        print('negative count: ', negative_c)
     
     return G_weighted   
 
@@ -468,7 +468,7 @@ def netvoronoi(G_weighted, station_file, output_file,
     counter = 0
     for e in stations:
         distances = pynet.dijkstras(G_weighted, evt_snapped[counter])
-        for k,v in distances.items():
+        for k,v in list(distances.items()):
             v = v * e.mul_wgt + e.add_wgt
             if distance_dic.get(k, 1e10) > v:
                 distance_dic[k] = v
@@ -484,7 +484,7 @@ def netvoronoi(G_weighted, station_file, output_file,
     edge_belong_dic = {}
     used = {}
     no_connect_count = 0
-    for k, neighbors in G_weighted.items():
+    for k, neighbors in list(G_weighted.items()):
 #         assert not isinstance(k,Station)
         if k not in vertex_dic:
             no_connect_count += 1
@@ -549,10 +549,10 @@ def read_stations(station_file, id_field=None, add_w_field=None,mul_w_field=None
     """
     
     stations = []
-    s = pysal.open(station_file)
-    dbf = pysal.open(station_file[:-3] + 'dbf')
-    if s.type != pysal.cg.shapes.Point:
-        raise ValueError, 'File is not of type Point'
+    s = libpysal.io.open(station_file)
+    dbf = libpysal.io.open(station_file[:-3] + 'dbf')
+    if s.type != libpysal.cg.shapes.Point:
+        raise ValueError('File is not of type Point')
     
     fields = (id_field, add_w_field, mul_w_field)
     idxs = []
@@ -603,13 +603,13 @@ def read_events(event_file, id_field=None):
     """
     
     points = []
-    s = pysal.open(event_file)
-    dbf = pysal.open(event_file[:-3] + 'dbf')
-    if s.type != pysal.cg.shapes.Point:
-        raise ValueError, 'File is not of type Point'
+    s = libpysal.io.open(event_file)
+    dbf = libpysal.io.open(event_file[:-3] + 'dbf')
+    if s.type != libpysal.cg.shapes.Point:
+        raise ValueError('File is not of type Point')
     
     id_idx = -1
-    if id_field <>None:
+    if id_field !=None:
         id_idx = dbf.header.index(id_field)
         
     def id_val(r,default):
@@ -665,7 +665,7 @@ def snap_and_count(events_list, G):
             cur = G[snapped[0]][snapped[1]]
             cur[counter] += 1
         counter += 1
-    return range(1,len(events_list)+1)
+    return list(range(1,len(events_list)+1))
 
 def snap_and_split(stations, G, G_origin = None, useOriginalType = True):
     """
@@ -721,7 +721,7 @@ def snap_and_split(stations, G, G_origin = None, useOriginalType = True):
         evt_snapped.append(point)
     
     collide_count = 0
-    for key,stations in edge_dic.items():
+    for key,stations in list(edge_dic.items()):
         st = key[0:2]
         end = key[2:]
         
@@ -747,12 +747,12 @@ def snap_and_split(stations, G, G_origin = None, useOriginalType = True):
             
             # add the edge with previous node
             prev_point = st
-            if i <> 0:
+            if i != 0:
                 prev_point = stations[i-1]
             
             if not useOriginalType:
-                if prev_point <> cur_e: #if the geometry collides, there is no need to add it
-                    dis_st = pysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
+                if prev_point != cur_e: #if the geometry collides, there is no need to add it
+                    dis_st = libpysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
                     G[cur_e][prev_point] = dis_st
                     G[prev_point][cur_e] = dis_st
                 else:
@@ -761,8 +761,8 @@ def snap_and_split(stations, G, G_origin = None, useOriginalType = True):
                 # if it's the last one, add the edge connecting the end node
                 if i == size-1:
                     aft_point = end
-                    if aft_point <> cur_e:
-                        dis_end = pysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
+                    if aft_point != cur_e:
+                        dis_end = libpysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
                         G[cur_e][aft_point] = dis_end
                         G[aft_point][cur_e] = dis_end
                     else:
@@ -772,16 +772,16 @@ def snap_and_split(stations, G, G_origin = None, useOriginalType = True):
             else:
                 #since we now use class to represent event or station, there's no problem in having points in the same location, this will however, still 
                 #causes a problem in KDE calculation
-                dis_st = pysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
+                dis_st = libpysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
                 G[cur_e][prev_point] = dis_st
                 G[prev_point][cur_e] = dis_st 
                 if i == size-1:
                     aft_point = end
-                    dis_end = pysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
+                    dis_end = libpysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
                     G[cur_e][aft_point] = dis_end
                     G[aft_point][cur_e] = dis_end
                     
-    print 'collide count: ', collide_count 
+    print('collide count: ', collide_count) 
     return evt_snapped
 
 def find_break_point(p1, p2, edge_len, dp1, dp2,mul_e1=1.0,mul_e2=1.0):
@@ -818,7 +818,7 @@ def find_break_point(p1, p2, edge_len, dp1, dp2,mul_e1=1.0,mul_e2=1.0):
     #distance of the breakpoint from p1
     dis = (dp2 - dp1 + edge_len * mul_e2) / (mul_e1 + mul_e2)
     if dis < 0:
-        print dis
+        print(dis)
     assert dis >= 0.0
     # calculate the absolute location
     return find_point_on_edge(p1,p2,dis,edge_len)
@@ -871,17 +871,17 @@ def write_edges_to_shp(edge_belong_dic, output_file, id_spec):
     
     make_sure_path_exists(output_file)
     if not output_file.lower().endswith('shp'):
-        print 'filename would end with shp'
+        print('filename would end with shp')
         return
     
-    shp = pysal.open(output_file, 'w')
-    dbf = pysal.open(output_file[:-3] + 'dbf', 'w')
+    shp = libpysal.io.open(output_file, 'w')
+    dbf = libpysal.io.open(output_file[:-3] + 'dbf', 'w')
     dbf.header = ['ID','STATION']
     dbf.field_spec = [('N', 9, 0), id_spec]
     
     # traverse all the edges, write in the event id and the edge geometry.
     counter = 0
-    for pair,event in edge_belong_dic.items():
+    for pair,event in list(edge_belong_dic.items()):
         shp.write(Chain([Point(pair[0]), Point(pair[1])]))                    
         dbf.write([counter, event.id])
         counter += 1
@@ -908,14 +908,14 @@ def write_kde_to_shp(G, density_dic, output_file):
     """    
     
     make_sure_path_exists(output_file)
-    shp = pysal.open(output_file, 'w')
-    dbf = pysal.open(output_file[:-3] + 'dbf', 'w')
+    shp = libpysal.io.open(output_file, 'w')
+    dbf = libpysal.io.open(output_file[:-3] + 'dbf', 'w')
     dbf.header = ['ID','density']
     dbf.field_spec = [('N', 9, 0), ('F', 15, 10)]
     
     counter = 0
     used = {}
-    for k, neighbors in G.items():
+    for k, neighbors in list(G.items()):
         for n in neighbors:
             if k+n in used:
                 continue
@@ -944,8 +944,8 @@ def write_ilincs_to_shp(cluster_levels, output_file):
                        
     """       
     make_sure_path_exists(output_file)
-    shp = pysal.open(output_file, 'w')
-    dbf = pysal.open(output_file[:-3] + 'dbf', 'w')
+    shp = libpysal.io.open(output_file, 'w')
+    dbf = libpysal.io.open(output_file[:-3] + 'dbf', 'w')
     dbf.header = ['ID','q','z','I','p']
     dbf.field_spec = [('N', 9, 0), ('N', 9, 0), ('F', 15,12), ('F', 15,12),('F', 15,12)]
     counter = 0
@@ -982,14 +982,14 @@ def print_info(info,tw = None):
                        
     """
     
-    if tw <>None:
+    if tw !=None:
         cur_time = tw.time
         delta = datetime.now() - cur_time
         combined = delta.seconds + delta.microseconds/1E6
-        print info +": "+str(combined) + " seconds"
+        print(info +": "+str(combined) + " seconds")
     else:
-        print info
-    if tw <>None:
+        print(info)
+    if tw !=None:
         tw.time = datetime.now()
         
 def get_avg_length(network):

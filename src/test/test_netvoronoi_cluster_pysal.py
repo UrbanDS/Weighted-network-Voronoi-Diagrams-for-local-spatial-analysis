@@ -1,12 +1,15 @@
 # coding=gbk 
 """networkvoronoi unittest"""
 import unittest
-import netvoronoi_cluster as nv
-import network as pynet
+import sys
+sys.path.append('../')
+
+from src import netvoronoi_cluster as nv
+from src import network as pynet
 import random
 import pysal
-import pysal.cg
-from pysal.cg.shapes import Point, Chain
+import libpysal.cg
+from libpysal.cg.shapes import Point, Chain
 random.seed(10)
 """
 several pre-processing steps are omitted here
@@ -16,16 +19,16 @@ several pre-processing steps are omitted here
 class NetworkVoronoi_Tester(unittest.TestCase):
     
     def setUp(self):
-        print 'set up'
+        print('set up')
     
 #    def test_crime_density(self):
-##        G_weighted, G_origin = nv.net_density('../data/pysal/streets.shp', '../data/pysal/crimes.shp', 200, 500, edge_weight_mode = "additive", normalize = [-100.0,100.0])
-#        G_weighted, G_origin = nv.net_density('../data/pysal/streets.shp', '../data/pysal/crimes.shp', 20, 50, normalize_method = "linear")
-#        nv.netvoronoi(G_weighted, G_origin, '../data/pysal/stations.shp', '../data/pysal/cluster/netvoronoi_lincs_linear_no_station_wgt.shp','ID_test', None, None)
+##        G_weighted, G_origin = nv.net_density('../../data/pysal/streets.shp', '../../data/pysal/crimes.shp', 200, 500, edge_weight_mode = "additive", normalize = [-100.0,100.0])
+#        G_weighted, G_origin = nv.net_density('../../data/pysal/streets.shp', '../../data/pysal/crimes.shp', 20, 50, normalize_method = "linear")
+#        nv.netvoronoi(G_weighted, G_origin, '../../data/pysal/stations.shp', '../../data/pysal/cluster/netvoronoi_lincs_linear_no_station_wgt.shp','ID_test', None, None)
     
 #    def test_crime_lincs(self):
-#        G_weighted, G_origin = nv.net_lincs('../data/pysal/streets.shp', '../data/pysal/crimes.shp', 200, edge_weight_mode = "additive", normalize = [-100.0,100.0])
-#        nv.netvoronoi(G_weighted, G_origin, '../data/pysal/stations.shp', '../data/pysal/netvoronoi_lincs_linear_no_station_wgt.shp','ID_test', None, None)
+#        G_weighted, G_origin = nv.net_lincs('../../data/pysal/streets.shp', '../../data/pysal/crimes.shp', 200, edge_weight_mode = "additive", normalize = [-100.0,100.0])
+#        nv.netvoronoi(G_weighted, G_origin, '../../data/pysal/stations.shp', '../../data/pysal/netvoronoi_lincs_linear_no_station_wgt.shp','ID_test', None, None)
    
 suite = unittest.TestSuite()
 test_classes = [NetworkVoronoi_Tester]

@@ -1,6 +1,6 @@
 '''
 This is a library that identifies space-time interaction in the network space. Majority of the code are directly
-ported from the PySAL module pysal.spatial_dynamics.interaction. We had to copy the code here instead of writing 
+ported from the PySAL module giddy.interaction. We had to copy the code here instead of writing 
 an extension because the original code does not provide an interface for incorporating other distance types.
 
 The methods correspond directly to the interaction module, with a 'net_' prefix added.
@@ -8,14 +8,14 @@ The methods correspond directly to the interaction module, with a 'net_' prefix 
 '''
 import numpy as np
 import scipy.stats as stats
-from pysal import cg
-from pysal.spatial_dynamics import util
+from libpysal import cg
+from giddy import util
 from netvoronoi_cluster import snap_and_split, Event
-import pysal.weights.Distance as Distance
+import libpysal.weights.distance as Distance
 import network as pynet
 import copy
 import operator
-import pysal.weights
+import libpysal.weights
 import sys
 
 class SpaceTimeEvents:
@@ -89,8 +89,8 @@ class SpaceTimeEvents:
 
     """
     def __init__(self, path, time_col,add_wgt_col = None,mul_wgt_col = None):
-        shp = pysal.open(path + '.shp')
-        dbf = pysal.open(path + '.dbf')
+        shp = libpysal.io.open(path + '.shp')
+        dbf = libpysal.io.open(path + '.dbf')
 
         # extract the spatial coordinates from the shapefile
         x = []
@@ -139,7 +139,7 @@ class SpaceTimeEvents:
             min_d = np.min(wgts)
             max_d = np.max(wgts)
             wgts_new = np.zeros(len(wgts))
-            for i in xrange(len(wgts)):
+            for i in range(len(wgts)):
                 wgts_new[i] = (wgts[i] - min_d)/(max_d - min_d) * (normalize[1]- normalize[0]) + normalize[0]
             wgts = wgts_new
         else:
@@ -287,7 +287,7 @@ def net_knox(events, delta, tau, G, distance_metric="network", permutations=99, 
     # calculate the statistic
     knoxmat = timemat * spacmat
     stat = (knoxmat.sum() - n) / 2
-    print 'stat computed: ', stat
+    print('stat computed: ', stat)
 
     # return results (if no inference)
     if permutations == 0:
@@ -296,7 +296,7 @@ def net_knox(events, delta, tau, G, distance_metric="network", permutations=99, 
 
     # loop for generating a random distribution to assess significance
     for p in range(permutations):
-        rtdistmat = util.shuffle_matrix(tdistmat, range(n))
+        rtdistmat = util.shuffle_matrix(tdistmat, list(range(n)))
         timemat = np.ones((n, n))
         test = rtdistmat <= tau
         timemat = timemat * test
@@ -305,7 +305,7 @@ def net_knox(events, delta, tau, G, distance_metric="network", permutations=99, 
         distribution.append(k)
         
         if p%50 == 0:
-            print 'permutation num: ', p
+            print('permutation num: ', p)
 
     # establish the pseudo significance of the observed statistic
     distribution = np.array(distribution)
@@ -315,7 +315,7 @@ def net_knox(events, delta, tau, G, distance_metric="network", permutations=99, 
     pvalue = (count + 1.0) / (permutations + 1.0)
     
     relative = 0
-    if exp <> 0:
+    if exp != 0:
         relative = stat / exp
 
     # return results
@@ -378,8 +378,8 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
         tdistmat = time_dis_matrix
     
     # initialize the bandwidth array
-    s_list = [0]+[(x+1)*s_bandwidth for x in range(s_count)] + [sys.maxint] # Caveat! There is a 1-meter buffer for events in the 'same location'
-    t_list = [(x+1)*t_bandwidth for x in range(t_count)] + [sys.maxint]
+    s_list = [0]+[(x+1)*s_bandwidth for x in range(s_count)] + [sys.maxsize] # Caveat! There is a 1-meter buffer for events in the 'same location'
+    t_list = [(x+1)*t_bandwidth for x in range(t_count)] + [sys.maxsize]
     
     s_list_length = len(s_list)
     t_list_length = len(t_list)
@@ -392,7 +392,7 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
     
     spacmat_list = []
     # identify events within thresholds
-    for i in xrange(s_list_length):
+    for i in range(s_list_length):
         spacmat = np.ones((n, n))
         test = sdistmat <= s_list[i]
         if i > 0:
@@ -402,7 +402,7 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
         spacmat = spacmat * test
         spacmat_list.append(spacmat)
         
-        for j in xrange(t_list_length):
+        for j in range(t_list_length):
             timemat = np.ones((n, n))
             test = tdistmat <= t_list[j]
             if j > 0:
@@ -416,12 +416,12 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
     # loop for generating a random distribution to assess significance
     distributions = np.zeros((s_count+2, t_count+1, permutations))
     for p in range(permutations):
-        rtdistmat = util.shuffle_matrix(tdistmat, range(n))
-        for j in xrange(t_list_length):
+        rtdistmat = util.shuffle_matrix(tdistmat, list(range(n)))
+        for j in range(t_list_length):
             test = rtdistmat <= t_list[j]
             timemat = np.ones((n, n))
             timemat = timemat * test
-            for i in xrange(s_list_length):
+            for i in range(s_list_length):
 #                spacmat = np.ones((n, n))
 #                test = sdistmat <= s_list[i]
 #                if i > 0:
@@ -435,10 +435,10 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
                 distributions[i,j,p] = k
                 
         if p%100 == 0:
-            print 'simulation times: ', p
+            print('simulation times: ', p)
                 
-    for i in xrange(s_list_length):  
-        for j in xrange(t_list_length):  
+    for i in range(s_list_length):  
+        for j in range(t_list_length):  
             # establish the pseudo significance of the observed statistic
             distribution = distributions[i,j]
             exp = np.mean(distribution)
@@ -447,7 +447,7 @@ def net_knox_grid(events, s_bandwidth, s_count, t_bandwidth, t_count, G, distanc
             pvalue = (count + 1.0) / (permutations + 1.0)
             
             relative = 0
-            if exp <> 0:
+            if exp != 0:
                 relative = stats[i,j] / exp
         
             pvalues[i,j] = pvalue
@@ -569,13 +569,13 @@ def net_mantel(events, G, distance_metric="network", permutations=99, scon=1.0, 
     # loop for generating a random distribution to assess significance
     dist = []
     for i in range(permutations):
-        trand = util.shuffle_matrix(timemat, range(n))
+        trand = util.shuffle_matrix(timemat, list(range(n)))
         timevec = (util.get_lower(trand) + tcon) ** tpow
         m = stats.pearsonr(timevec, distvec)[0].sum()
         dist.append(m)
         
         if i%50 == 0:
-            print 'permutation num: ', i
+            print('permutation num: ', i)
 
     ## establish the pseudo significance of the observed statistic
     distribution = np.array(dist)
@@ -585,7 +585,7 @@ def net_mantel(events, G, distance_metric="network", permutations=99, scon=1.0, 
     pvalue = (count + 1.0) / (permutations + 1.0)
 
     relative = 0
-    if exp <> 0:
+    if exp != 0:
         relative = stat / exp
 
     # return results
@@ -712,7 +712,7 @@ def net_modified_knox(events, delta, tau, G, distance_metric="network", permutat
 
     # loop for generating a random distribution to assess significance
     for p in range(permutations):
-        rtdistmat = util.shuffle_matrix(tdistmat, range(n))
+        rtdistmat = util.shuffle_matrix(tdistmat, list(range(n)))
         timemat = np.ones((n, n))
         timebin = rtdistmat <= tau
         timemat = timemat * timebin
@@ -731,7 +731,7 @@ def net_modified_knox(events, delta, tau, G, distance_metric="network", permutat
         distribution.append(tempstat)
         
         if p%50 == 0:
-            print 'permutation num: ', p
+            print('permutation num: ', p)
 
     # establish the pseudo significance of the observed statistic
     distribution = np.array(distribution)
@@ -741,7 +741,7 @@ def net_modified_knox(events, delta, tau, G, distance_metric="network", permutat
     pvalue = (count + 1.0) / (permutations + 1.0)
 
     relative = 0
-    if exp <> 0:
+    if exp != 0:
         relative = stat / exp
 
     # return results
@@ -864,7 +864,7 @@ def net_jacquez(events, k, G, distance_metric="network", permutations=99, spat_d
         dist.append(j)
         
         if p%50 == 0:
-            print 'permutation num: ', p
+            print('permutation num: ', p)
 
     # establish the pseudo significance of the observed statistic
     distribution = np.array(dist)
@@ -874,7 +874,7 @@ def net_jacquez(events, k, G, distance_metric="network", permutations=99, spat_d
     pvalue = (count + 1.0) / (permutations + 1.0)
     
     relative = 0
-    if exp <> 0:
+    if exp != 0:
         relative = stat / exp
 
     # return results
@@ -882,7 +882,7 @@ def net_jacquez(events, k, G, distance_metric="network", permutations=99, spat_d
     return jacquez_result
 
 import scipy.spatial
-from pysal.common import *
+from libpysal.cg import *
 
 def knnW(data, k=2, p=2, ids=None):
     if issubclass(type(data), scipy.spatial.KDTree):
@@ -891,7 +891,7 @@ def knnW(data, k=2, p=2, ids=None):
     elif type(data).__name__ == 'ndarray':
         kd = KDTree(data)
     else:
-        print 'Unsupported  type'
+        print('Unsupported  type')
 
     # calculate
     nnq = kd.query(data, k=k + 1, p=p)
@@ -911,7 +911,7 @@ def knnW(data, k=2, p=2, ids=None):
         neighbors[idset[i]] = list(idset[row])
         weights[idset[i]] = [1] * len(neighbors[idset[i]])
 
-    return pysal.weights.W(neighbors, weights=weights, id_order=ids)
+    return libpysal.weights.W(neighbors, weights=weights, id_order=ids)
 
 def k_neighbor_matrix(k, G, s,distance_metric, add_wgts, mul_wgts, spat_dis_matrix = None):
     """
@@ -943,13 +943,13 @@ def k_neighbor_matrix(k, G, s,distance_metric, add_wgts, mul_wgts, spat_dis_matr
     
     neighbors = {}
     weights = {}
-    for i in xrange(len(s)):
+    for i in range(len(s)):
         arr = D[i]
         index_arr = sorted(enumerate(arr), key=operator.itemgetter(1))
         neighbors[i] = list(x[0] for x in index_arr[0:(k+1)])
         weights[i] = [1] * len(neighbors[i])
         
-    return pysal.weights.W(neighbors, weights=weights)
+    return libpysal.weights.W(neighbors, weights=weights)
     
 def distance_matrix(G, s, distance_metric, add_wgts, mul_wgts):
     """
@@ -983,9 +983,9 @@ def distance_matrix(G, s, distance_metric, add_wgts, mul_wgts):
     else:
         sdistmat = cg.distance_matrix(s)
     
-    if distance_metric <> "network":  
-        for x in xrange(sdistmat.shape[0]):
-            for y in xrange(sdistmat.shape[1]):
+    if distance_metric != "network":  
+        for x in range(sdistmat.shape[0]):
+            for y in range(sdistmat.shape[1]):
                 sdistmat[x,y] = mul_wgts[x]*mul_wgts[y]*sdistmat[x,y] - (add_wgts[x]+add_wgts[y])
         
     return sdistmat
@@ -1026,7 +1026,7 @@ def network_distance_matrix(G, s, add_wgts, mul_wgts):
     i = 0
     for e in evt_snapped:
         distances = pynet.dijkstras(G, e)
-        for k,v in distances.items():
+        for k,v in list(distances.items()):
             if type(k) == Event:
                 dis = v * e.mul_wgt * k.mul_wgt - (e.add_wgt + k.add_wgt)
                 if dis > 0:
@@ -1035,7 +1035,7 @@ def network_distance_matrix(G, s, add_wgts, mul_wgts):
                     D[e.id, k.id] = 0
         
         if i%50 == 0:
-            print 'current event order: ', i
+            print('current event order: ', i)
         i += 1
     
     return D

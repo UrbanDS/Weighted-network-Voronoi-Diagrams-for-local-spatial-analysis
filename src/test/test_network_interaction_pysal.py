@@ -1,9 +1,11 @@
-# coding=gbk 
 """networkvoronoi unittest"""
+import sys
+sys.path.append('../')
+
 import unittest
-import network_interaction as ni
-#from pysal.spatial_dynamics import interaction
-import network as pynet
+from src import network_interaction as ni
+#from giddy import interaction
+from src import network as pynet
 import random
 random.seed(10)
 """
@@ -13,8 +15,8 @@ several pre-processing steps are omitted here
 """
 class NetworkVoronoi_Tester(unittest.TestCase):
     def setUp(self):
-        self.events = ni.SpaceTimeEvents('../data/pysal/crimes', 'T')
-        self.G = pynet.read_network('../data/pysal/streets.shp')
+        self.events = ni.SpaceTimeEvents('../../data/pysal/crimes', 'T')
+        self.G = pynet.read_network('../../data/pysal/streets.shp')
 
 #    def test_knox(self):
 #        result = ni.net_knox(self.events, 20, 5, self.G,'network', 99)
@@ -33,7 +35,7 @@ class NetworkVoronoi_Tester(unittest.TestCase):
     def test_jacquez(self):
 #        result = ni.net_jacquez(self.events, 8,self.G, 'network', 99)
         result = ni.net_jacquez(self.events, 8,None, 'manhatten', 99)
-        print result
+        print(result)
    
 suite = unittest.TestSuite()
 test_classes = [NetworkVoronoi_Tester]

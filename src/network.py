@@ -5,9 +5,9 @@ svn checkout http://pysal.googlecode.com/svn/trunk/ pysal-read-only
 """
 import math
 import pysal
-import pysal.cg
-from pysal.cg.shapes import Point, Chain, LineSegment, Rectangle
-from pysal.cg.locators import Grid
+import libpysal.cg
+from libpysal.cg.shapes import Point, Chain, LineSegment, Rectangle
+from libpysal.cg.locators import Grid
 import random, copy
 from heapq import heappush, heappop
 import time
@@ -87,14 +87,14 @@ def net_global_stats(G, boundary=None, detour=True):
     eta = L*1.0/e
     net_den = None
     if boundary:
-        s = pysal.open(boundary)
-        if s.type != pysal.cg.shapes.Polygon: 
-            raise ValueError, 'File is not of type POLYGON'
+        s = libpysal.io.open(boundary)
+        if s.type != libpysal.cg.shapes.Polygon: 
+            raise ValueError('File is not of type POLYGON')
         net_den = s.next().area
     net_dist, eucl_dist = 0.0, 0.0
     det = None
     if detour:
-        nodes = G.keys()
+        nodes = list(G.keys())
         for n in nodes:
             net_D = dijkstras(G, n)
             net_dist += sum(net_D.values())
@@ -135,7 +135,7 @@ def random_projs(G, n):
             lengthogram.append((lengthogram[-1][0] + G[src][dest], (src, dest)))
 
     projs = []
-    for i in xrange(n):
+    for i in range(n):
         e = binary_search(lengthogram, random.random() * total_net_len)
         wgt = G[e[0]][e[1]]
         along = wgt * random.random()
@@ -230,9 +230,9 @@ def dijkstras(G, start, r=1e600, p=False):
                 try:
                     heappush(Q, (D[v], v))
                 except:
-                    print u
-                    print v
-                    print D[v]
+                    print(u)
+                    print(v)
+                    print(D[v])
                     raise
     if p: 
         return D, P
@@ -274,18 +274,18 @@ class Snapper:
         for n in network:
             for m in network[n]:
                 if n != m: 
-                    edge_lens.append(pysal.cg.get_points_dist(Point(n), Point(m))) # it can be optional
+                    edge_lens.append(libpysal.cg.get_points_dist(Point(n), Point(m))) # it can be optional
         if edge_lens == []:
-            raise ValueError, 'Network has no positive-length edges'
+            raise ValueError('Network has no positive-length edges')
         edge_lens.sort()
-        max_allowed_edge_len = 5 * edge_lens[len(edge_lens)/2]
+        max_allowed_edge_len = 5 * edge_lens[len(edge_lens)//2]
 
         """ 
         Create a bin structures with proper range to hold all of the edges.
         The size of the bin is on the order of the length of the longest edge (and
         of the neighborhoods searched around each query point.
         """
-        endpoints = network.keys()
+        endpoints = list(network.keys())
         endpoints_start, endpoints_end = [ep[0] for ep in endpoints], [ep[1] for ep in endpoints]
         bounds = Rectangle(min(endpoints_start),min(endpoints_end),max(endpoints_start),max(endpoints_end))
         self.grid = Grid(bounds, max_allowed_edge_len)
@@ -298,7 +298,7 @@ class Snapper:
         self.search_rad = max_allowed_edge_len*0.55
         for n in network:
             for m in network[n]:
-                edge_len = pysal.cg.get_points_dist(Point(n), Point(m)) # it can be a direct extraction
+                edge_len = libpysal.cg.get_points_dist(Point(n), Point(m)) # it can be a direct extraction
                 if edge_len > max_allowed_edge_len:
                     mid_edge = []
                     num_parts = int(math.ceil(edge_len/max_allowed_edge_len))
@@ -306,7 +306,7 @@ class Snapper:
                     dx = m[0] - n[0]
                     dy = m[1] - n[1]
                     midpoint = (n[0] + dx*part_step/2, n[1] + dy*part_step/2)
-                    for r in [part_step*t for t in xrange(num_parts)]:
+                    for r in [part_step*t for t in range(num_parts)]:
                         mid_edge.append(((n, m), midpoint))
                         midpoint = (midpoint[0] + dx*part_step, midpoint[1] + dy*part_step)
                     for me in mid_edge:
@@ -347,7 +347,7 @@ class Snapper:
         best_seg_dist = 1e600
         for e in self.grid.proximity(Point(p), cur_s_rad):
             seg = LineSegment(Point(e[0]), Point(e[1]))
-            p2seg = pysal.cg.get_segment_point_dist(seg, Point(p))
+            p2seg = libpysal.cg.get_segment_point_dist(seg, Point(p))
             dist = p2seg[0]
             if p2seg[0] < best_seg_dist:
                 # (src, dest, dist_from_src, dist_from_dest)
@@ -377,7 +377,7 @@ def network_from_allvertices(s, d):
         vertices = g.vertices
         for i, vertex in enumerate(vertices[:-1]):
             n1, n2 = vertex, vertices[i+1]
-            dist = pysal.cg.get_points_dist(Point(n1), Point(n2)) 
+            dist = libpysal.cg.get_points_dist(Point(n1), Point(n2)) 
             if dist > 0:
                 G.setdefault(n1, {}) 
                 G.setdefault(n2, {}) 
@@ -386,7 +386,7 @@ def network_from_allvertices(s, d):
             else:
                 error_count += 1
                 
-    print 'vertex overlapped in one link: ', error_count
+    print('vertex overlapped in one link: ', error_count)
     s.close()
     d.close()
     return G
@@ -400,7 +400,7 @@ def read_hierarchical_network(s, d):
         d_total = 0.0 
         for i, vertex in enumerate(vertices[:-1]):
             n1, n2 = vertex, vertices[i+1]
-            dist = pysal.cg.get_points_dist(Point(n1), Point(n2)) 
+            dist = libpysal.cg.get_points_dist(Point(n1), Point(n2)) 
             G.setdefault(n1, {}) 
             G.setdefault(n2, {}) 
             G[n1][n2] = dist 
@@ -414,14 +414,14 @@ def read_hierarchical_network(s, d):
     return G, Gj, G_to_Gj
 
 def read_network(filename, wgt_field=None, undirected=True, endnodes=False, hierarchical=False, attrs=None):
-    s = pysal.open(filename)
-    dbf = pysal.open(filename[:-3] + 'dbf')
-    if s.type != pysal.cg.shapes.Chain:
-        raise ValueError, 'File is not of type ARC'
+    s = libpysal.io.open(filename)
+    dbf = libpysal.io.open(filename[:-3] + 'dbf')
+    if s.type != libpysal.cg.shapes.Chain:
+        raise ValueError('File is not of type ARC')
     if not endnodes and not undirected:
-        raise ValueError, 'Network using all vertices should be undirected'
+        raise ValueError('Network using all vertices should be undirected')
     if hierarchical and not (undirected and not endnodes):
-        raise ValueError, 'Hierarchial network should be undirected and use all vertices'
+        raise ValueError('Hierarchial network should be undirected and use all vertices')
     if endnodes:
         if wgt_field and attrs == None:
             w = dbf.header.index(wgt_field)
@@ -435,11 +435,11 @@ def read_network(filename, wgt_field=None, undirected=True, endnodes=False, hier
         elif wgt_field is None and attrs:
             w_indices = [dbf.header.index(field) for field in attrs]
             def wgt(g, r):
-                d = pysal.cg.get_points_dist(Point(g.vertices[0]), Point(g.vertices[-1]))
+                d = libpysal.cg.get_points_dist(Point(g.vertices[0]), Point(g.vertices[-1]))
                 return [d] + [r[w] for w in w_indices] 
         else:
             def wgt(g, r):
-                return pysal.cg.get_points_dist(Point(g.vertices[0]), Point(g.vertices[-1]))
+                return libpysal.cg.get_points_dist(Point(g.vertices[0]), Point(g.vertices[-1]))
         return network_from_endnodes(s, dbf, wgt, undirected)
     if not endnodes and not hierarchical:
         return network_from_allvertices(s, dbf)
@@ -448,7 +448,7 @@ def read_network(filename, wgt_field=None, undirected=True, endnodes=False, hier
 
 def proj_pnt_coor(proj_pnt):
     n1, n2 = proj_pnt[0], proj_pnt[1]
-    dist_n12 = pysal.cg.get_points_dist(Point(n1), Point(n2))
+    dist_n12 = libpysal.cg.get_points_dist(Point(n1), Point(n2))
     len_ratio = proj_pnt[2]*1.0/dist_n12
     xrange, yrange = n2[0] - n1[0], n2[1] - n1[1]
     x = n1[0] + xrange*len_ratio
@@ -489,14 +489,14 @@ def inject_points(network, proj_pnts):
                 new_network[start] = {}
             if end not in new_network:
                 new_network[end] = {}
-            d = pysal.cg.get_points_dist(Point(start), Point(end))
+            d = libpysal.cg.get_points_dist(Point(start), Point(end))
             new_network[start][end] = d
             new_network[end][start] = d
-        if new_network.has_key(seg[0]) and new_network[seg[0]].has_key(seg[1]):
+        if seg[0] in new_network and seg[1] in new_network[seg[0]]:
             del new_network[seg[0]][seg[1]]
             del new_network[seg[1]][seg[0]]
         else:
-            print seg, network.has_key(seg[0]), network[seg[0]], network.has_key(seg[1]), network[seg[1]]
+            print(seg, seg[0] in network, network[seg[0]], seg[1] in network, network[seg[1]])
 
     return new_network, proj_pnt_coors
 
@@ -529,10 +529,10 @@ def mesh_network(network, cellwidth, at_center=False):
             if xs[-1] != end[0] or ys[-1] != end[1]:
                 xs.append(end[0])
                 ys.append(end[1])
-            new_nodes = zip(xs, ys)
+            new_nodes = list(zip(xs, ys))
             for i in range(len(new_nodes) - 1):
                 n, m = new_nodes[i], new_nodes[i+1]
-                d = pysal.cg.get_points_dist(Point(n), Point(m))
+                d = libpysal.cg.get_points_dist(Point(n), Point(m))
                 if n not in mesh_net: mesh_net[n] = {}
                 if m not in mesh_net: mesh_net[m] = {}
                 mesh_net[n][m] = d
@@ -544,11 +544,11 @@ def mesh_network(network, cellwidth, at_center=False):
 def write_network_to_pysalshp(network, filename, header=None, field_spec=None):
 
     if not filename.endswith('shp') and not filename.endswith('SHP'):
-        print 'filename would end with shp or SHP'
+        print('filename would end with shp or SHP')
         return
 
-    shp = pysal.open(filename, 'w')
-    dbf = pysal.open(filename[:-3] + 'dbf', 'w')
+    shp = libpysal.io.open(filename, 'w')
+    dbf = libpysal.io.open(filename[:-3] + 'dbf', 'w')
     if not header:
         dbf.header = ['ID', 'VALUE']
     else:
@@ -559,9 +559,9 @@ def write_network_to_pysalshp(network, filename, header=None, field_spec=None):
             return [G[n][m]]
     else:
         dbf.field_spec = [('N', 9, 0)] + field_spec
-        v = network[network.keys()[0]] 
+        v = network[list(network.keys())[0]] 
         if type(v) == dict:
-            v = v.values()[0]
+            v = list(v.values())[0]
         if type(v) == list:
             wrap_func = list
         else:
@@ -583,8 +583,8 @@ def write_network_to_pysalshp(network, filename, header=None, field_spec=None):
     dbf.close()
 
 def write_valued_network_to_shp(filename, fields, types, net, values, valFunc):
-    oShp = pysal.open(filename, 'w')        
-    oDbf = pysal.open(filename[:-3] + 'dbf', 'w')
+    oShp = libpysal.io.open(filename, 'w')        
+    oDbf = libpysal.io.open(filename[:-3] + 'dbf', 'w')
     oDbf.header = fields                    
     oDbf.field_spec = types                 
     #for n in net:                           
@@ -603,8 +603,8 @@ def write_valued_network_to_shp(filename, fields, types, net, values, valFunc):
     oDbf.close()
 
 def write_list_network_to_shp(filename, fields, types, net):
-    oShp = pysal.open(filename, 'w')        
-    oDbf = pysal.open(filename[:-3] + 'dbf', 'w')
+    oShp = libpysal.io.open(filename, 'w')        
+    oDbf = libpysal.io.open(filename[:-3] + 'dbf', 'w')
     oDbf.header = ['ID'] + fields                    
     oDbf.field_spec = [('N',9,0)] + types                 
     for i, rec in enumerate(net):

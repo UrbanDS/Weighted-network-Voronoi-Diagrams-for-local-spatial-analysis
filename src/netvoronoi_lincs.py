@@ -12,8 +12,8 @@ unreleased PySAL development version
 
 """
 import network as pynet
-import pysal.cg
-from pysal.cg.shapes import Point, Chain
+import libpysal.cg
+from libpysal.cg.shapes import Point, Chain
 from datetime import datetime
 import lincs
 import copy
@@ -181,7 +181,7 @@ def netvoronoi(network_file, station_file, output_file,
                         negative_c += 1
             counter += 1
             
-        print 'negative count', negative_c
+        print('negative count', negative_c)
         print_info('Local clustering level computing ',st_time)
     
     st_time = datetime.now()
@@ -200,7 +200,7 @@ def netvoronoi(network_file, station_file, output_file,
     vertex_dic = {} #the node cover vertex_dic
     for e in stations:
         distances = pynet.dijkstras(G, evt_snapped_dic[e.id])
-        for k,v in distances.items():
+        for k,v in list(distances.items()):
             v = v * e.mul_wgt + e.add_wgt
             if distance_dic.get(k, 1e10) > v:
                 distance_dic[k] = v
@@ -215,7 +215,7 @@ def netvoronoi(network_file, station_file, output_file,
     st_time = datetime.now() 
     edge_belong_dic = {}
     used = {}
-    for k, neighbors in G.items():
+    for k, neighbors in list(G.items()):
         assert not isinstance(k,Station)
         assert k in vertex_dic
              
@@ -252,10 +252,10 @@ def read_stations(station_file, id_field=None, add_w_field=None,mul_w_field=None
     Read the station points from a shp file
     """
     events = []
-    s = pysal.open(station_file)
-    dbf = pysal.open(station_file[:-3] + 'dbf')
-    if s.type != pysal.cg.shapes.Point:
-        raise ValueError, 'File is not of type Point'
+    s = libpysal.io.open(station_file)
+    dbf = libpysal.io.open(station_file[:-3] + 'dbf')
+    if s.type != libpysal.cg.shapes.Point:
+        raise ValueError('File is not of type Point')
     
     fields = (id_field, add_w_field, mul_w_field)
     idxs = []
@@ -287,10 +287,10 @@ def read_events(event_file):
     Read event file, attributes ignored for now
     """
     points = []
-    s = pysal.open(event_file)
-    dbf = pysal.open(event_file[:-3] + 'dbf')
-    if s.type != pysal.cg.shapes.Point:
-        raise ValueError, 'File is not of type Point'
+    s = libpysal.io.open(event_file)
+    dbf = libpysal.io.open(event_file[:-3] + 'dbf')
+    if s.type != libpysal.cg.shapes.Point:
+        raise ValueError('File is not of type Point')
     
     for g, r in zip(s,dbf):
         points.append(Point(g))
@@ -346,7 +346,7 @@ def snap_and_split(stations, G, G_origin = None):
         edge_dic[key].append(point)
         evt_snapped_dic[e.id] = point
         
-    for key,stations in edge_dic.items():
+    for key,stations in list(edge_dic.items()):
         st = key[0:2]
         end = key[2:]
         
@@ -372,17 +372,17 @@ def snap_and_split(stations, G, G_origin = None):
             
             # add the edge with previous node
             prev_point = st
-            if i <> 0:
+            if i != 0:
                 prev_point = stations[i-1]
             
-            dis_st = pysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
+            dis_st = libpysal.cg.get_points_dist(Point(prev_point), Point(cur_e)) * scale
             G[cur_e][prev_point] = dis_st
             G[prev_point][cur_e] = dis_st
             
             # if it's the last one, add the edge connecting the end node
             if i == size-1:
                 aft_point = end
-                dis_end = pysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
+                dis_end = libpysal.cg.get_points_dist(Point(cur_e), Point(aft_point)) * scale
                 G[cur_e][aft_point] = dis_end
                 G[aft_point][cur_e] = dis_end
                 
@@ -396,7 +396,7 @@ def find_break_point(p1, p2, edge_len, dp1, dp2,mul_e1=1.0,mul_e2=1.0):
     #distance of the breakpoint from p1
     dis = (dp2 - dp1 + edge_len * mul_e2) / (mul_e1 + mul_e2)
     if dis < 0:
-        print dis
+        print(dis)
     assert dis >= 0.0
     # calculate the absolute location
     return find_point_on_edge(p1,p2,dis,edge_len)
@@ -413,17 +413,17 @@ def write_edges_to_shp(edge_belong_dic, output_file, event_id_spec):
     write the network Voronoi computation result to a SHP file 
     """
     if not output_file.lower().endswith('shp'):
-        print 'filename would end with shp'
+        print('filename would end with shp')
         return
     
-    shp = pysal.open(output_file, 'w')
-    dbf = pysal.open(output_file[:-3] + 'dbf', 'w')
+    shp = libpysal.io.open(output_file, 'w')
+    dbf = libpysal.io.open(output_file[:-3] + 'dbf', 'w')
     dbf.header = ['ID','STATION']
     dbf.field_spec = [('N', 9, 0), event_id_spec]
     
     # traverse all the edges, write in the event id and the edge geometry.
     counter = 0
-    for pair,event in edge_belong_dic.items():
+    for pair,event in list(edge_belong_dic.items()):
         shp.write(Chain([Point(pair[0]), Point(pair[1])]))                    
         dbf.write([counter, event.id])
         counter += 1
@@ -432,9 +432,9 @@ def write_edges_to_shp(edge_belong_dic, output_file, event_id_spec):
     dbf.close()
 
 def print_info(info,cur_time = None):
-    if cur_time <>None:
+    if cur_time !=None:
         delta = datetime.now() - cur_time
         combined = delta.seconds + delta.microseconds/1E6
-        print info +": "+str(combined) + " seconds"
+        print(info +": "+str(combined) + " seconds")
     else:
-        print info
+        print(info)

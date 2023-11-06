@@ -126,7 +126,7 @@ def kernel_density(network, events, bandwidth, orig_nodes, kernel='quadratic'):
                 
             counter += 1
             if counter%1000 == 0:
-                print 'god it is over: ', counter
+                print('god it is over: ', counter)
             
         return split_multiplier
     # end of step ii

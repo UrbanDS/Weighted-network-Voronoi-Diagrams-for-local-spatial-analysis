@@ -7,14 +7,14 @@ weight matrix.
 The code style is intentionally made similar with the module lincs for consistency.
 
 '''
-import pysal.spatial_dynamics.directional as direc
+import giddy.directional as direc
 import numpy as np
 from lincs import node_weights, edgepoints_from_network, dist_weights
 
 def net_rose(network, eventIdx_t0, eventIdx_t1, weight, dist=None, k=8, permutations=0):
     """
     Calculation of rose diagram for local indicators of spatial association in network space, 
-    see pysal.spatial_dynamics.directional for further examples
+    see giddy.directional for further examples
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def net_rose(network, eventIdx_t0, eventIdx_t1, weight, dist=None, k=8, permutat
         for edge in edges:
             edges_geom.append(edges[edge][0])
             e[edge] = [edges[edge][eventIdx_t0], edges[edge][eventIdx_t1]]
-        w.id_order = edges.keys()
+        w.id_order = list(edges.keys())
     elif dist is not None:
         id2edgepoints, id2attr, edge2id = edgepoints_from_network(network, attribute=True)
         for n1 in network:
@@ -72,6 +72,6 @@ def net_rose(network, eventIdx_t0, eventIdx_t1, weight, dist=None, k=8, permutat
         for edge in id2attr:
             edges_geom.append(edges[edge])
             e[edge] = [id2attr[edge][eventIdx_t0 - 1], id2attr[edge][eventIdx_t1 - 1]]
-        w.id_order = id2attr.keys()
+        w.id_order = list(id2attr.keys())
         
     return direc.rose(e, w, k, permutations)

@@ -12,7 +12,7 @@ import numpy as np
 import scipy.stats as stats
 #import geodanet.network as pynet
 import network as pynet
-import pysal.weights, pysal.esda
+import libpysal.weights, esda
 
 import pysal, copy
 import time
@@ -154,7 +154,7 @@ def node_weights(network, attribute=False):
                         neighbor_ids.append(link2id[edge])
                 neighbors[link2id[(n1,n2)]] = neighbor_ids
                 weights[link2id[(n1,n2)]] = [1.0]*(len(neighbors_from_n1) + len(neighbors_from_n2))
-    return pysal.weights.W(neighbors, weights), id2link 
+    return libpysal.weights.W(neighbors, weights), id2link 
 
 def edgepoints_from_network(network, attribute=False):
     """
@@ -204,7 +204,7 @@ def dist_weights(network, id2linkpoints, link2id, bandwidth):
         w : a distance-based, binary spatial weights matrix
         id2link: a dictionary that associates a unique id to each edge of the network
     """
-    linkpoints = id2linkpoints.values()
+    linkpoints = list(id2linkpoints.values())
     neighbors, id2link = {}, {}
     net_distances = {}
     for linkpoint in id2linkpoints:
@@ -217,7 +217,7 @@ def dist_weights(network, id2linkpoints, link2id, bandwidth):
             del ngh[linkpoints[linkpoint]]
         if linkpoint not in neighbors:
             neighbors[linkpoint] = []
-        for k in ngh.keys():
+        for k in list(ngh.keys()):
             neighbor = link2id[k[:2]]
             if neighbor not in neighbors[linkpoint]:
                 neighbors[linkpoint].append(neighbor)
@@ -229,7 +229,7 @@ def dist_weights(network, id2linkpoints, link2id, bandwidth):
     weights = copy.copy(neighbors)
     for ngh in weights:
         weights[ngh] = [1.0]*len(weights[ngh])
-    return pysal.weights.W(neighbors, weights), id2link
+    return libpysal.weights.W(neighbors, weights), id2link
 
 
 def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method="permutations", sim_num=99):
@@ -266,13 +266,13 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
 
     """
     if lisa_func in ['g', 'g_star'] and weight == 'Node-based':
-        print 'Local G statistics can work only with distance-based weights matrix'
+        print('Local G statistics can work only with distance-based weights matrix')
         raise 
 
     if lisa_func == 'moran':
-        lisa_func = pysal.esda.moran.Moran_Local
+        lisa_func = esda.moran.Moran_Local
     else:
-        lisa_func = pysal.esda.getisord.G_Local
+        lisa_func = esda.getisord.G_Local
 
     star = False
     if lisa_func == 'g_star':
@@ -294,11 +294,11 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
             try:
                 e[edge] = edges[edge][event]
             except:
-                print edge
-                print event
+                print(edge)
+                print(event)
                 raise Exception() 
             b[edge] = getBase(edges, edge, base)
-        w.id_order = edges.keys()
+        w.id_order = list(edges.keys())
     elif dist is not None:
         id2edgepoints, id2attr, edge2id = edgepoints_from_network(network, attribute=True)
         for n1 in network:
@@ -313,11 +313,11 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
             edges_geom.append(edges[edge])
             e[edge] = id2attr[edge][event - 1]
             b[edge] = getBase(id2attr, edge, base)
-        w.id_order = id2attr.keys()
+        w.id_order = list(id2attr.keys())
 
     Is, p_sim, Zs, qs = None,None, None, None
     if sim_method == 'permutation':
-        if lisa_func == pysal.esda.moran.Moran_Local:
+        if lisa_func == esda.moran.Moran_Local:
             lisa_i = lisa_func(e*1.0/b,w,transformation="r",permutations=sim_num)
             Is = lisa_i.Is
 #            Zs = lisa_i.q
@@ -331,7 +331,7 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
         p_sim = lisa_i.p_sim
     else:
         sims = None
-        if lisa_func == pysal.esda.moran.Moran_Local:
+        if lisa_func == esda.moran.Moran_Local:
             lisa_i = lisa_func(e*1.0/b,w,transformation="r",permutations=0)
             Is = lisa_i.Is
 #            Zs = lisa_i.q
@@ -347,7 +347,7 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
             sims = unconditional_sim_poisson(e, b, sim_num)
         else:
             sims = conditional_multinomial(e, b, sim_num)
-            if lisa_func == pysal.esda.moran.Moran_Local:
+            if lisa_func == esda.moran.Moran_Local:
                 for i in range(sim_num):
                     sims[:,i] = lisa_func(sims[:,i]*1.0/b,w,transformation="r",permutations=0).Is
             else:
@@ -357,4 +357,4 @@ def lincs(network, event, base, weight, dist=None, lisa_func='moran', sim_method
         p_sim = sim_res[0]
 
     w.transform = 'O'
-    return zip(edges_geom, e, b, Is, Zs, p_sim, qs), w
+    return list(zip(edges_geom, e, b, Is, Zs, p_sim, qs)), w
